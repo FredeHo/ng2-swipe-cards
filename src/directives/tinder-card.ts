@@ -37,7 +37,7 @@ export class TinderCardDirective implements OnInit, OnDestroy {
 
   @Output() onLike: EventEmitter<any> = new EventEmitter();
 
-  like: boolean;
+  action: string;
 
   element: HTMLElement;
   renderer: Renderer;
@@ -49,9 +49,9 @@ export class TinderCardDirective implements OnInit, OnDestroy {
   }
 
   onReleaseLikeCb(event: any) {
-    this.like = event.like;
+    this.action = event.action;
     let el = this.element;
-    let x = (el.offsetWidth + el.clientWidth) * ((!!event.like ? 1 : -1) || 0);
+    let x = (el.offsetWidth + el.clientWidth) * ((event.action == "like" ? 1 : event.action == "dislike" ? 0 : 1) || 0);
     let rotate = (x * 20) / el.clientWidth;
 
     if (this._overlay) {
@@ -65,7 +65,7 @@ export class TinderCardDirective implements OnInit, OnDestroy {
     if (this._overlay) {
       let overlayElm = <HTMLElement>this.element.querySelector('.tinder-overlay');
       this.renderer.setElementStyle(overlayElm, "transition", "opacity 0s ease");
-      let opacity = (event.distance < 0 ? event.distance * -1 : event.distance) * 0.5 / this.element.offsetWidth;
+      let opacity = Math.max(((event.distance < 0 ? event.distance * -1 : event.distance) * 0.5 / this.element.offsetWidth), ((event.distance < 0 ? event.distance * -1 : event.distance) * 0.5 / this.element.offsetWidth));
       this.renderer.setElementStyle(overlayElm, "opacity", opacity.toString());
     }
   }
@@ -78,13 +78,28 @@ export class TinderCardDirective implements OnInit, OnDestroy {
 
   @HostListener('onSwipe', ['$event'])
   onSwipe(event: any) {
-    let like = (this.orientation === "y" && event.deltaY < 0) ||
-      (this.orientation !== "y" && event.deltaX > 0);
-    let opacity = (event.distance < 0 ? event.distance * -1 : event.distance) * 0.5 / this.element.offsetWidth;
+    let action;
+
+    if(event.deltaX > 0)
+    {
+      action = "like"
+    } else {
+      action = "dislike";
+    }
+
+    if(event.deltaY > 0)
+    {
+      if(Math.abs(event.deltaX) < Math.abs(event.deltaY)) action = "ignore";
+    } else {
+      if(Math.abs(event.deltaX) < Math.abs(event.deltaY)) action = "watchlist";
+    }
+
+      let opacity = Math.max(((event.distance < 0 ? event.distance * -1 : event.distance) * 0.5 / this.element.offsetWidth), ((event.distance < 0 ? event.distance * -1 : event.distance) * 0.5 / this.element.offsetWidth));
+      
     if (!!this._overlay) {
       this.renderer.setElementStyle(this.overlayElement, "transition", "opacity 0s ease");
       this.renderer.setElementStyle(this.overlayElement, "opacity", opacity.toString());
-      this.renderer.setElementStyle(this.overlayElement, "background-color", this._overlay[like ? "like" : "dislike"].backgroundColor);
+      this.renderer.setElementStyle(this.overlayElement, "background-color", this._overlay[action].backgroundColor);
     }
     this.translate({
       x: event.deltaX,
@@ -103,13 +118,26 @@ export class TinderCardDirective implements OnInit, OnDestroy {
 
   @HostListener('onRelease', ['$event'])
   onRelease(event: any) {
-    let like = (this.orientation === "y" && event.deltaY < 0) ||
-      (this.orientation !== "y" && event.deltaX > 0);
+    let action;
+
+    if(event.deltaX > 0)
+    {
+      action = "like"
+    } else {
+      action = "dislike";
+    }
+
+    if(event.deltaY > 0)
+    {
+      if(Math.abs(event.deltaX) < Math.abs(event.deltaY)) action = "ignore";
+    } else {
+      if(Math.abs(event.deltaX) < Math.abs(event.deltaY)) action = "watchlist";
+    }
     if (this._callLike) {
-      this._callLike.emit({ like });
+      this._callLike.emit({ action });
     }
     if (this.onLike) {
-      this.onLike.emit({ like });
+      this.onLike.emit({ action });
     }
   }
 
